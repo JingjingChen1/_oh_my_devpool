@@ -8,9 +8,12 @@ set -euo pipefail
 # 会把 bash 后续读脚本的 stdin 切到 /dev/tty, 导致 `curl|bash` 卡死.
 # 包进 main() 后函数体先完整载入, exec 只在调用时生效, 不再影响脚本读取.
 main() {
+    local __stdin_switched=0
     if [ ! -t 0 ]; then
         if [ -r /dev/tty ]; then
+            exec 9<&0
             exec </dev/tty
+            __stdin_switched=1
         else
             echo "stdin 不是 tty 且 /dev/tty 不可读, 请改为 'bash deploy.sh'" >&2
             exit 1
@@ -35,6 +38,12 @@ main() {
         -H "Accept: application/vnd.github.v3.raw" \
         "$DEPLOY_API_URL" \
         | DEPLOY_TOKEN="$DEPLOY_TOKEN_VAL" bash
+
+    # 恢复原始 stdin（pipe），让 `curl | bash` 在脚本结束后正常退出。
+    if [ "$__stdin_switched" = "1" ]; then
+        exec 0<&9
+        exec 9<&-
+    fi
 }
 
 main "$@"
