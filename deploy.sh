@@ -23,15 +23,18 @@ main() {
     DEPLOY_SCRIPT_PATH="${DEPLOY_SCRIPT_PATH:-deploy.sh}"
     DEPLOY_API_URL="${DEPLOY_API_URL:-https://api.github.com/repos/${DEPLOY_PRIVATE_REPO}/contents/${DEPLOY_SCRIPT_PATH}?ref=${DEPLOY_REF}}"
 
-    if [ -z "${GITHUB_TOKEN:-}" ]; then
-        printf 'GitHub PAT: ' >&2; IFS= read -rs GITHUB_TOKEN; echo >&2
+    local DEPLOY_TOKEN_VAL
+    if [ -n "${DEPLOY_TOKEN:-}" ]; then
+        DEPLOY_TOKEN_VAL="$DEPLOY_TOKEN"
+    else
+        printf '部署凭据 (DEPLOY_TOKEN): ' >&2; IFS= read -rs DEPLOY_TOKEN_VAL; echo >&2
     fi
-    [ -z "$GITHUB_TOKEN" ] && { echo "Token required" >&2; exit 1; }
+    [ -z "$DEPLOY_TOKEN_VAL" ] && { echo "DEPLOY_TOKEN required" >&2; exit 1; }
     curl -fsSL \
-        -H "Authorization: token $GITHUB_TOKEN" \
+        -H "Authorization: token $DEPLOY_TOKEN_VAL" \
         -H "Accept: application/vnd.github.v3.raw" \
         "$DEPLOY_API_URL" \
-        | GITHUB_TOKEN="$GITHUB_TOKEN" bash
+        | DEPLOY_TOKEN="$DEPLOY_TOKEN_VAL" bash
 }
 
 main "$@"
